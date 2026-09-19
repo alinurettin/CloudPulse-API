@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CloudPulse-API | Real-Time Microservice Observability</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22><text y=%2222%22 font-size=%2220%22>⚡</text></svg>">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <span class="brand-icon">⚡</span>
+      <div class="brand-text">
+        <h1>CloudPulse-API</h1>
+        <span class="brand-sub">Real-Time Microservice Observability & Latency Engine</span>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <div class="live-pill">
+        <span class="live-dot"></span>
+        <span id="liveStatus">Live SSE Connected</span>
+      </div>
+      <a href="/metrics" target="_blank" class="nav-btn secondary">📊 Prometheus Metrics</a>
+      <button class="nav-btn primary" id="btnOpenAddModal">➕ Add Service</button>
+    </div>
+  </header>
+
+  <!-- Global Metrics Bar -->
+  <section class="metrics-grid">
+    <div class="metric-card">
+      <span class="metric-label">TOTAL MONITORED</span>
+      <span class="metric-val" id="valTotalServices">0</span>
+    </div>
+    <div class="metric-card healthy">
+      <span class="metric-label">HEALTHY</span>
+      <span class="metric-val" id="valHealthyServices">0</span>
+    </div>
+    <div class="metric-card degraded">
+      <span class="metric-label">DEGRADED / SLOW</span>
+      <span class="metric-val" id="valDegradedServices">0</span>
+    </div>
+    <div class="metric-card down">
+      <span class="metric-label">DOWN / FAILING</span>
+      <span class="metric-val" id="valDownServices">0</span>
+    </div>
+  </section>
+
+  <!-- Main Container -->
+  <main class="container">
+    <div class="section-header">
+      <h2>Active Services & Endpoints</h2>
+      <span class="auto-refresh-tag">⚡ Streaming real-time probe updates</span>
+    </div>
+
+    <!-- Services Grid -->
+    <div class="services-list" id="servicesList">
+      <div class="loading-placeholder">Loading services & probe metrics...</div>
+    </div>
+  </main>
+
+  <!-- Modal: Add New Service -->
+  <div class="modal-overlay hidden" id="modalAddService">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Register Microservice Endpoint</h3>
+        <button class="close-btn" id="btnCloseModal">✕</button>
+      </div>
+      <form id="formAddService">
+        <div class="form-group">
+          <label for="inputName">Service Name</label>
+          <input type="text" id="inputName" placeholder="e.g. Order Processing API" required class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="inputUrl">Health / Status URL</label>
+          <input type="url" id="inputUrl" placeholder="https://api.example.com/health" required class="form-input">
+        </div>
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="inputInterval">Interval (ms)</label>
+            <input type="number" id="inputInterval" value="15000" min="2000" class="form-input">
+          </div>
+          <div class="form-group half">
+            <label for="inputTimeout">Timeout (ms)</label>
+            <input type="number" id="inputTimeout" value="5000" min="500" class="form-input">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="btnCancelModal">Cancel</button>
+          <button type="submit" class="btn-submit">Register & Start Probing</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>CloudPulse-API v1.0.0 &bull; Built autonomously by the 7-Agent SDLC Team &bull; <a href="https://github.com/alinurettin/CloudPulse-API" target="_blank">GitHub Repository</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

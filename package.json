@@ -1,0 +1,22 @@
+{
+  "name": "cloudpulse-api",
+  "version": "1.0.0",
+  "description": "Real-time microservice health, latency and uptime monitoring engine with Prometheus export and live WebSocket dashboard",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node tests/run_tests.js"
+  },
+  "keywords": [
+    "microservices",
+    "health-check",
+    "latency-monitor",
+    "prometheus",
+    "uptime",
+    "observability",
+    "sre",
+    "devops"
+  ],
+  "author": "Ali Nurettin Demir",
+  "license": "MIT"
+}

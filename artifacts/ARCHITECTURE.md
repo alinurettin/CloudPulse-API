@@ -1,100 +1,106 @@
-# 📐 System Architecture Document: CloudPulse-API
-
-- **Project:** CloudPulse-API
-- **Author:** Expert Software Architect
-- **Status:** APPROVED & COMPLETE
-- **Version:** 1.0.0
+# 🏛️ System Architecture Specification: CloudPulse-API v2.0.0
+- **Document Status:** APPROVED & COMPLETE
+- **Author:** Principal Systems Architect
+- **Version:** 2.0.0
+- **Date:** 2026-09-20
 
 ---
 
-## 1. High-Level Architecture Overview
+## 1. Architectural Overview
+
+`CloudPulse-API v2.0.0` provides an asynchronous synthetic probe and Prometheus exposition architecture.
 
 ```mermaid
 flowchart TD
-    Client[📱 Web Dashboard / API Client] -->|HTTP / REST| API[Express REST Router]
-    Client -->|WebSocket /ws| WSHub[WebSocket Streaming Hub]
-    Prom[Prometheus Scraper] -->|GET /metrics| Exporter[Prometheus Metrics Exporter]
+    Client[Web Dashboard / REST Client] -->|HTTP / REST API| Server[HTTP Server & API Gateway]
+    Prometheus[Prometheus / Grafana Agent] -->|GET /metrics Scrape| Server
+    Client <-->|SSE Stream: /api/events| Server
     
-    API --> Engine[Probe & Monitoring Engine]
-    Engine --> Store[(In-Memory Service & Sample Store)]
-    Engine --> NetProbe[Asynchronous HTTP/TCP Network Prober]
+    subgraph Core Engine [CloudPulse Core]
+        Server --> Store[(Service Store & Ring Buffer)]
+        Server --> ProbeEngine[Asynchronous Probe Engine]
+        Server --> StatsEngine[Nearest-Rank Percentile Engine]
+        Server --> PromExporter[Prometheus Exporter]
+        
+        ProbeEngine --> Store
+        StatsEngine --> Store
+        PromExporter --> Store
+    end
     
-    NetProbe --> ExtServices[🌐 Target Microservices & Endpoints]
-    NetProbe --> Store
-    Store --> WSHub
+    ProbeEngine -->|HTTP / HTTPS Probes| ExtServices[Target Microservices & APIs]
 ```
 
 ---
 
-## 2. Directory Structure Layout
+## 2. Probe Lifecycle & Telemetry Streaming Sequence
 
-```text
-CloudPulse-API/
-├── src/
-│   ├── index.js                  # Application entrypoint & HTTP server
-│   ├── server.js                 # Express app configuration & middleware
-│   ├── probeEngine.js            # Periodic probing loop & network fetcher
-│   ├── store.js                  # Thread-safe in-memory store with persistence
-│   ├── stats.js                  # Statistical percentile calculations (p50, p95, p99)
-│   ├── prometheus.js             # Prometheus metrics formatting
-│   └── websocket.js              # WebSocket hub & client connection pool
-├── public/                       # Frontend Live Dashboard
-│   ├── index.html                # Dark-themed operational UI
-│   ├── style.css                 # Responsive CSS3 styles & animations
-│   └── app.js                    # WebSocket client & real-time chart renderer
-├── tests/                        # Automated Test Suites
-│   ├── stats.test.js             # Unit tests for percentile and uptime calculations
-│   ├── store.test.js             # Unit tests for service CRUD & history ring buffer
-│   └── api.test.js               # Integration tests for REST endpoints & Prometheus
-├── artifacts/                    # Engineering Lifecycle Documents
-│   ├── RESEARCH_REPORT.md
-│   ├── PRD.md
-│   ├── ARCHITECTURE.md
-│   ├── QA_REPORT.md
-│   ├── RELEASE_NOTES.md
-│   └── COMMUNICATION_LOG.md
-├── Dockerfile                    # Multi-stage production container
-├── docker-compose.yml            # Zero-configuration orchestration
-├── package.json                  # Dependencies & test scripts
-├── .github/workflows/ci.yml      # GitHub Actions automated CI/CD pipeline
-└── README.md                     # Comprehensive project documentation
+```mermaid
+sequenceDiagram
+    autonumber
+    actor SRE as SRE / Web Console
+    participant API as API Gateway (Node.js)
+    participant Engine as ProbeEngine
+    participant Target as External Microservice
+    participant Prom as Prometheus Scraper
+    
+    SRE->>API: POST /api/services (Register Service)
+    API->>Engine: scheduleService(service)
+    Engine->>Target: HTTP GET /health
+    Target-->>Engine: 200 OK (latency: 18ms)
+    Engine->>Engine: Store.recordProbe(id, result)
+    Engine->>Engine: Compute Nearest-Rank p50, p90, p95, p99 & stdDev
+    Engine-)SRE: SSE Broadcast: event "service_update"
+    
+    Prom->>API: GET /metrics
+    API->>API: formatPrometheusMetrics(services)
+    API-->>Prom: 200 OK (OpenMetrics Text Exposition)
 ```
 
 ---
 
-## 3. Data Model & REST API Contracts
+## 3. Data Structures
 
-### Data Model: `Service`
+### 3.1 Service Entity Schema
 ```typescript
-interface Service {
-  id: string;               // Unique alphanumeric ID (e.g. srv-auth-01)
-  name: string;             // Human readable name (e.g. Auth Gateway)
-  url: string;              // Target HTTP/HTTPS endpoint
-  intervalMs: number;       // Polling frequency in ms (default: 10000)
-  timeoutMs: number;        // Request timeout in ms (default: 5000)
-  status: 'HEALTHY' | 'DEGRADED' | 'DOWN' | 'PENDING';
-  lastCheckedAt: string;    // ISO timestamp
-  lastLatencyMs: number;    // Most recent round-trip latency
-  uptimePercent: number;    // Calculated uptime (e.g. 99.85%)
-  stats: {
-    p50: number;
-    p95: number;
-    p99: number;
-    sampleCount: number;
-  };
-  history: Array<{
-    timestamp: string;
-    status: string;
-    statusCode: number;
-    latencyMs: number;
-  }>;
+interface ServiceEntity {
+  id: string;                    // Unique identifier (e.g. srv-a1b2c3d4)
+  name: string;                  // Service display name
+  url: string;                   // HTTP/HTTPS target URL
+  intervalMs: number;            // Polling interval in milliseconds
+  timeoutMs: number;             // Request timeout in milliseconds
+  status: 'PENDING' | 'HEALTHY' | 'DEGRADED' | 'DOWN';
+  lastCheckedAt: string | null;  // ISO 8601 timestamp
+  lastLatencyMs: number;         // Most recent probe latency
+  uptimePercent: number;         // Cumulative uptime percentage
+  stats: ServiceStatistics;      // Statistical distribution metrics
+  history: ProbeHistoryEntry[];  // Bounded ring buffer (max 100 entries)
+}
+
+interface ServiceStatistics {
+  p50: number;                   // Median latency (ms)
+  p90: number;                   // 90th percentile latency (ms)
+  p95: number;                   // 95th percentile SLA latency (ms)
+  p99: number;                   // 99th percentile tail latency (ms)
+  avg: number;                   // Arithmetic mean latency (ms)
+  min: number;                   // Minimum latency observed (ms)
+  max: number;                   // Maximum latency observed (ms)
+  stdDev: number;                // Latency standard deviation (ms)
+  sampleCount: number;           // Valid sample count
+  uptimePercent: number;         // Computed uptime percentage
 }
 ```
 
-### REST API Endpoints
-1. `GET /api/health` -> System health (`status: 'OK'`, `uptime: number`, `servicesMonitored: number`)
-2. `GET /api/services` -> List all monitored services with current stats
-3. `POST /api/services` -> Register a new service (`{ name, url, intervalMs?, timeoutMs? }`)
-4. `DELETE /api/services/:id` -> Remove a monitored service
-5. `POST /api/services/:id/ping` -> Trigger an immediate ad-hoc probe
-6. `GET /metrics` -> Standard Prometheus metrics text
+---
+
+## 4. REST API Surface
+
+| Method | Endpoint | Description | Status Code |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/health` | System liveness probe | 200 OK |
+| `GET` | `/api/stats` | Global health summary (total, healthy, degraded, down) | 200 OK |
+| `GET` | `/metrics` | Prometheus standard scrape endpoint | 200 OK (text/plain) |
+| `GET` | `/api/services` | List all monitored microservices | 200 OK |
+| `POST` | `/api/services` | Register a new microservice for monitoring | 201 Created |
+| `DELETE`| `/api/services/:id` | Remove a service from monitoring | 200 OK / 404 |
+| `POST` | `/api/services/:id/ping` | Execute an ad-hoc synthetic probe | 200 OK / 404 |
+| `GET` | `/api/events` | Real-time Server-Sent Events (SSE) telemetry stream | 200 OK (text/event-stream) |

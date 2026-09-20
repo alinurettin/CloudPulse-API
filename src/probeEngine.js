@@ -15,14 +15,14 @@ class ProbeEngine {
     const startTime = Date.now();
     return new Promise((resolve) => {
       try {
-        const parsed = url.parse(service.url);
+        const parsed = new URL(service.url);
         const protocol = parsed.protocol === 'https:' ? https : http;
 
         const reqOptions = {
           protocol: parsed.protocol,
           hostname: parsed.hostname,
           port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
-          path: parsed.path || '/',
+          path: parsed.pathname + parsed.search,
           method: 'GET',
           timeout: service.timeoutMs,
           headers: {

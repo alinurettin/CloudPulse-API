@@ -1,24 +1,30 @@
+// CloudPulse-API v2.0.0 - Latency Analyzer Engine
+const { calculatePercentile, calculateStats } = require('./stats');
+
 class LatencyAnalyzer {
-  constructor() {
+  constructor(maxSamples = 5000) {
+    this.maxSamples = maxSamples;
     this.latencies = [];
   }
+
   record(latencyMs) {
-    this.latencies.push(latencyMs);
-    if (this.latencies.length > 5000) this.latencies.shift();
+    this.latencies.push(Number(latencyMs));
+    if (this.latencies.length > this.maxSamples) {
+      this.latencies.shift();
+    }
   }
+
   percentile(p) {
-    if (this.latencies.length === 0) return 0;
-    const sorted = [...this.latencies].sort((a, b) => a - b);
-    const index = Math.ceil((p / 100) * sorted.length) - 1;
-    return sorted[Math.max(0, index)];
+    return calculatePercentile(this.latencies, p);
   }
+
   summary() {
+    const fakeHistory = this.latencies.map(l => ({ status: 'HEALTHY', latencyMs: l }));
     return {
       count: this.latencies.length,
-      p50: this.percentile(50),
-      p95: this.percentile(95),
-      p99: this.percentile(99)
+      ...calculateStats(fakeHistory)
     };
   }
 }
+
 module.exports = LatencyAnalyzer;

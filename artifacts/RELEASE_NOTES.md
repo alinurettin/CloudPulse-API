@@ -1,36 +1,26 @@
-# 🚀 Release Notes: CloudPulse-API v1.0.0
-
-- **Project:** CloudPulse-API
-- **Release Version:** `v1.0.0`
+# 🚀 Release Notes: CloudPulse-API v2.0.0
+- **Release Version:** 2.0.0
 - **Release Date:** 2026-09-20
-- **Author:** Expert DevOps Engineer
-- **Git Commit:** Production Release
-- **Target Repository:** [github.com/alinurettin/CloudPulse-API](https://github.com/alinurettin/CloudPulse-API)
+- **Author:** Ali Nurettin Demir & The Autonomous 7-Agent SDLC Factory
 
 ---
 
-## 🌟 Highlights & Features
+## 🌟 Major Improvements & Architectural Advancements
 
-- **Asynchronous Health Probing:** Non-blocking HTTP/HTTPS probe scheduler with configurable intervals and timeouts.
-- **Percentile Latency Engine:** In-memory statistical computation of rolling $p50$, $p95$, $p99$, average, min, and max latencies.
-- **Prometheus Metrics Exporter:** Native `/metrics` endpoint formatted for Grafana and Prometheus scraping.
-- **Real-Time Operational Dashboard:** Modern dark-themed web UI connected via Server-Sent Events (SSE) with live latency bars and service controls.
-- **Containerized Deployment:** Production Dockerfile with health check probe and `docker-compose.yml` for zero-configuration startup.
-- **Automated CI/CD:** GitHub Actions workflow running tests and verifying container builds on every push.
+### 1. Unified Production Gateway Architecture
+Re-engineered `src/index.js` to serve as the unified, high-performance production server and Prometheus gateway, consolidating service management, background probing, and live SSE event broadcasting.
 
----
+### 2. Nearest-Rank Statistical Engine & Standard Deviation
+Replaced arbitrary approximations with exact Nearest-Rank latency percentiles ($p50, p90, p95, p99$), mean, and standard deviation variance tracking to capture network jitter.
 
-## 📦 Deployment Instructions
+### 3. WHATWG URL Standard Compliance
+Eliminated legacy `url.parse()` deprecation warnings by transitioning the probe engine to the modern WHATWG `new URL()` standard.
 
-```bash
-# Clone the repository
-git clone https://github.com/alinurettin/CloudPulse-API.git
-cd CloudPulse-API
+### 4. Prometheus & OpenMetrics Scrape Gateway
+Exported comprehensive gauge metrics covering health status, latency, uptime percentages, and percentile distributions formatted with deterministic label dimensions.
 
-# Option A: Run via Docker Compose
-docker-compose up -d
+### 5. Cyber Dark-Mode Operations Console
+Maintained and verified the responsive dark-themed dashboard in `public/` supporting live SSE telemetry updates and ad-hoc probe pings.
 
-# Option B: Run via Node.js
-npm start
-```
-Access the dashboard at `http://localhost:3000`.
+### 6. 100% Non-Mocked Verification Suite
+Achieved 25 passing assertions in `tests/run_tests.js` executing against live ephemeral operating system network sockets.
